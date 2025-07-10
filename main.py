@@ -216,9 +216,11 @@ def webhook():
         elif text == "/my_score":
             score = user_scores.get(user_id, 0)
             send_message(chat_id, f"Баланс: {score:.2f}⭐️")
-        # ... (далі переносите всю логіку з handle_message, button_handler, тощо)
+            send_main_menu(chat_id)
+        # ... (інші команди, якщо треба, теж можна додати send_main_menu)
         else:
             send_message(chat_id, "Я отримав твоє повідомлення!")
+            send_main_menu(chat_id)
     elif "callback_query" in data:
         # Тут логіка для inline-кнопок (callback_query)
         query = data["callback_query"]
