@@ -1,0 +1,19 @@
+[
+    {
+        "name": "Книга",
+        "price": 10,
+        "file_ids": [
+            "AgACAgQAAxkBAAICzWhrnlakeFIGRsjmm4w9OEft0C2PAAKExzEbDyJhU2VO1cvhB8ybAQADAgADeQADNgQ",
+            "AgACAgQAAxkBAAIC0mhrn3Zya1Sd5nEKo3wM2HKFhV9bAAKJxzEbDyJhUx2hPyMaH6MLAQADAgADeQADNgQ",
+            "AgACAgQAAxkBAAIC1Ghrn3sGrvE5Skx_VdvrB8XAmbl3AAKLxzEbDyJhU1YtC4BG9OCXAQADAgADeQADNgQ"
+        ]
+    },
+    {
+        "name": "Кава",
+        "price": 5
+    },
+    {
+        "name": "Квиток у кіно",
+        "price": 20
+    }
+]
