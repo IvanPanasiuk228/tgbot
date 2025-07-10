@@ -498,21 +498,12 @@ def setup_jobs():
 if __name__ == "__main__":
     setup_jobs()
     port = int(os.environ.get("PORT", 10000))
-    # Запускаємо PTB у окремому потоці
-    threading.Thread(target=lambda: telegram_app.run_webhook(
+    telegram_app.run_webhook(
         listen="0.0.0.0",
         port=port,
         webhook_url=WEBHOOK_URL,
         drop_pending_updates=True
-    )).start()
-    # Запускаємо Flask для root endpoint
-    app = Flask(__name__)
-
-    @app.route("/")
-    def index():
-        return "Bot is running!"
-
-    app.run(host="0.0.0.0", port=port)
+    )
 
 # === Інструкція ===
 # Після деплою на Render, зареєструйте webhook для вашого бота:
