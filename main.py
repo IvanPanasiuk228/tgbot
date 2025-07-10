@@ -502,11 +502,11 @@ def setup_jobs():
 if __name__ == "__main__":
     setup_jobs()
     telegram_app.run_webhook(
-        listen="0.0.0.0",
-        port=10000,
-        webhook_url="https://tgbot-kqfh.onrender.com/8076795269:AAG0z1_n31zSeLxk_z-PKJZLv_rv3JR5XHE",
-        drop_pending_updates=True
-    )
+      listen="0.0.0.0",
+      port=10000,
+      webhook_url="https://tgbot-kqfh.onrender.com/8076795269:AAG0z1_n31zSeLxk_z-PKJZLv_rv3JR5XHE",
+      drop_pending_updates=True
+  )
 
 # === Інструкція ===
 # Після деплою на Render, зареєструйте webhook для вашого бота:
