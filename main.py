@@ -113,6 +113,7 @@ def calculate_score(time, difficulty, nb, mental, time_weight, difficulty_weight
 
 # /start команда
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("Start handler called!")
     keyboard = [
         [InlineKeyboardButton("Завдання", callback_data="tasks_menu")],
         [InlineKeyboardButton("Цілі", callback_data="goals")],
@@ -502,21 +503,19 @@ def setup_jobs():
 # === Flask endpoint для Telegram webhook ===
 @app.route(WEBHOOK_PATH, methods=["POST"])
 def webhook():
+    print("Webhook called!")
     update = Update.de_json(request.get_json(force=True), telegram_app.bot)
     telegram_app.update_queue.put(update)
     return "ok"
 
 if __name__ == "__main__":
-    # Запускаємо PTB Application у окремому потоці
     setup_jobs()
-    threading.Thread(target=telegram_app.run_webhook, kwargs={
-        "listen": "0.0.0.0",
-        "port": 10000,
-        "webhook_url": WEBHOOK_URL,
-        "drop_pending_updates": True
-    }).start()
-    # Flask слухає порт (Render цього вимагає)
-    app.run(host="0.0.0.0", port=10000)
+    telegram_app.run_webhook(
+        listen="0.0.0.0",
+        port=10000,
+        webhook_url=WEBHOOK_URL,
+        drop_pending_updates=True
+    )
 
 # === Інструкція ===
 # Після деплою на Render, зареєструйте webhook для вашого бота:
