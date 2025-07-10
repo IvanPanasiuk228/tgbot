@@ -6,7 +6,7 @@ from datetime import date, timedelta
 import random
 import datetime
 
-print("=== РОБОЧИЙ MAIN.PY ЗАВАНТАЖУЄТЬСЯ ===")
+print("=== ЗАВАНТАЖУЄТЬСЯ ОНОВЛЕНИЙ main.py ===")
 
 TOKEN = "8076795269:AAG0z1_n31zSeLxk_z-PKJZLv_rv3JR5XHE"
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{TOKEN}"
@@ -133,17 +133,7 @@ def update_user_stats_on_done(user_id, task_name, score):
     stats.setdefault("done", []).append({"name": task_name, "score": score})
     stats["combo"] = get_today_combo(user_id)
     stats["bonus"] = stats.get("bonus", 0)
-    
-    # Нараховуємо бали до балансу користувача
-    combo = stats["combo"]
-    earned_score = score * combo
-    user_scores[user_id] = user_scores.get(user_id, 0) + earned_score
-    
-    # Зберігаємо зміни
     save_user_stats()
-    save_scores()
-    
-    # Бонус за 3 завдання
     if len(stats["done"]) == 3 and stats["bonus"] == 0:
         user_scores[user_id] = user_scores.get(user_id, 0) + 10
         stats["bonus"] = 10
@@ -228,28 +218,6 @@ def webhook():
             score = user_scores.get(user_id, 0)
             send_message(chat_id, f"Баланс: {score:.2f}⭐️")
             send_main_menu(chat_id)
-        elif text.startswith("/add_task "):
-            # Додавання завдання через команду
-            task_text = text[10:]  # Видаляємо "/add_task "
-            if task_text.strip():
-                # Додаємо завдання до списку користувача
-                if user_id not in user_tasks:
-                    user_tasks[user_id] = []
-                user_tasks[user_id].append(task_text)
-                save_tasks()
-                send_message(chat_id, f"Завдання '{task_text}' додано!")
-            else:
-                send_message(chat_id, "Будь ласка, вкажіть текст завдання після /add_task")
-        elif text.startswith("/done "):
-            # Позначення завдання як виконаного
-            task_text = text[6:]  # Видаляємо "/done "
-            if task_text.strip():
-                # Розраховуємо бали (базова оцінка 5 балів)
-                base_score = 5.0
-                update_user_stats_on_done(user_id, task_text, base_score)
-                send_message(chat_id, f"✅ Завдання '{task_text}' виконано! +{base_score:.2f}⭐️")
-            else:
-                send_message(chat_id, "Будь ласка, вкажіть текст завдання після /done")
         else:
             send_message(chat_id, "Я отримав твоє повідомлення!")
             send_main_menu(chat_id)
@@ -259,7 +227,7 @@ def webhook():
         user_id = str(chat_id)
         data_value = query["data"]
         if data_value == "add_task":
-            send_message(chat_id, "Введи текст завдання або використай команду /add_task [текст]")
+            send_message(chat_id, "Введи текст завдання:")
         elif data_value == "my_score":
             score = user_scores.get(user_id, 0)
             send_message(chat_id, f"Баланс: {score:.2f}⭐️")
@@ -331,22 +299,6 @@ def webhook_info():
     <p>Webhook URL: https://your-domain.com/{TOKEN}</p>
     <p>Status: Ready to receive updates</p>
     """
-
-@app.route("/reset_balance/<user_id>", methods=["GET"])
-def reset_balance(user_id):
-    """Скидає баланс користувача до 0"""
-    if user_id in user_scores:
-        user_scores[user_id] = 0
-        save_scores()
-        return f"Баланс користувача {user_id} скинуто до 0"
-    return f"Користувача {user_id} не знайдено"
-
-@app.route("/set_balance/<user_id>/<float:amount>", methods=["GET"])
-def set_balance(user_id, amount):
-    """Встановлює баланс користувача"""
-    user_scores[user_id] = amount
-    save_scores()
-    return f"Баланс користувача {user_id} встановлено на {amount}"
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
