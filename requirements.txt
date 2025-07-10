@@ -1,2 +1,2 @@
-python-telegram-bot[job_queue]==20.0
-apscheduler
+python-telegram-bot==20.0
+Flask
