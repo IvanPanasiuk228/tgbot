@@ -216,10 +216,14 @@ def webhook():
             score = user_scores.get(user_id, 0)
             send_message(chat_id, f"Баланс: {score:.2f}⭐️")
         elif data_value == "permatasks":
-            text = "Постійні завдання:\n"
-            for t in permatasks:
-                text += f"- {t['name']} ({t['score']}⭐️)\n"
-            send_message(chat_id, text)
+            keyboard = []
+            for idx, t in enumerate(permatasks):
+                keyboard.append([{
+                    "text": f"{t['name']} ({t['score']}⭐️)",
+                    "callback_data": f"do_permatask_{idx}"
+                }])
+            reply_markup = json.dumps({"inline_keyboard": keyboard})
+            send_message(chat_id, "Оберіть завдання для виконання:", reply_markup=reply_markup)
         elif data_value == "my_tasks":
             tasks = user_tasks.get(user_id, [])
             if tasks:
@@ -245,6 +249,13 @@ def webhook():
         elif data_value == "my_stats":
             report = get_daily_report(user_id)
             send_message(chat_id, report)
+        elif data_value.startswith("do_permatask_"):
+            idx = int(data_value.split("_")[-1])
+            task = permatasks[idx]
+            reward = task["score"]
+            user_scores[user_id] = user_scores.get(user_id, 0) + reward
+            save_scores()
+            send_message(chat_id, f"Ви виконали: {task['name']}! +{reward}⭐️ до балансу.")
     return "ok"
 
 @app.route("/", methods=["GET"])
