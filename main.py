@@ -464,8 +464,6 @@ WEBHOOK_PATH = f"/{TOKEN}"
 # Змініть на свою адресу Render нижче!
 WEBHOOK_URL = f"https://tgbot-kqfh.onrender.com/{TOKEN}"
 
-app = Flask(__name__)
-
 # === PTB Application ===
 telegram_app = ApplicationBuilder().token(TOKEN).build()
 
@@ -513,7 +511,7 @@ if __name__ == "__main__":
     telegram_app.run_webhook(
         listen="0.0.0.0",
         port=10000,
-        webhook_url=WEBHOOK_URL,
+        webhook_url="https://tgbot-kqfh.onrender.com/8076795269:AAG0z1_n31zSeLxk_z-PKJZLv_rv3JR5XHE",
         drop_pending_updates=True
     )
 
