@@ -112,9 +112,7 @@ def calculate_score(time, difficulty, nb, mental, time_weight, difficulty_weight
 # /start команда
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("Додати завдання", callback_data="add_task")],
-        [InlineKeyboardButton("Мої завдання", callback_data="my_tasks")],
-        [InlineKeyboardButton("Постійні завдання", callback_data="permatasks")],
+        [InlineKeyboardButton("Завдання", callback_data="tasks_menu")],
         [InlineKeyboardButton("Цілі", callback_data="goals")],
         [InlineKeyboardButton("Екстра бали", callback_data="extra")],
         [InlineKeyboardButton("Баланс", callback_data="my_score")],
@@ -124,6 +122,20 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Вітаю! Обери дію:", reply_markup=reply_markup)
+
+# Підменю для завдань
+async def tasks_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("Додати завдання", callback_data="add_task")],
+        [InlineKeyboardButton("Мої завдання", callback_data="my_tasks")],
+        [InlineKeyboardButton("Постійні завдання", callback_data="permatasks")],
+        [InlineKeyboardButton("← Назад", callback_data="back_to_menu")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    if update.callback_query:
+        await update.callback_query.edit_message_text("Меню завдань:", reply_markup=reply_markup)
+    else:
+        await update.message.reply_text("Меню завдань:", reply_markup=reply_markup)
 
 # Команда для отримання chat_id
 async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
