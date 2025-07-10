@@ -184,10 +184,13 @@ def send_main_menu(chat_id):
         [{"text": "Баланс", "callback_data": "my_score"}],
         [{"text": "Купити", "callback_data": "buy"}],
         [{"text": "Цілі", "callback_data": "goals"}],
-        [{"text": "Статистика", "callback_data": "my_stats"}]
+        [{"text": "Статистика", "callback_data": "my_stats"}],
+        [{"text": "Екстра бали", "callback_data": "extra_score"}]
     ]
     reply_markup = json.dumps({"inline_keyboard": keyboard})
     send_message(chat_id, "Вітаю! Обери дію:", reply_markup=reply_markup)
+
+pending_extra_score = {}
 
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
@@ -196,7 +199,16 @@ def webhook():
         chat_id = data["message"]["chat"]["id"]
         text = data["message"].get("text", "")
         user_id = str(chat_id)
-        if text == "/start":
+        if user_id in pending_extra_score and pending_extra_score[user_id]:
+            try:
+                extra = float(text)
+                user_scores[user_id] = user_scores.get(user_id, 0) + extra
+                save_scores()
+                send_message(chat_id, f"Вам нараховано {extra}⭐️ екстра балів! Ваш новий баланс: {user_scores[user_id]:.2f}⭐️")
+                pending_extra_score[user_id] = False
+            except ValueError:
+                send_message(chat_id, "Будь ласка, введіть число.")
+        elif text == "/start":
             send_main_menu(chat_id)
         elif text == "/my_score":
             score = user_scores.get(user_id, 0)
@@ -249,12 +261,16 @@ def webhook():
         elif data_value == "my_stats":
             report = get_daily_report(user_id)
             send_message(chat_id, report)
+        elif data_value == "extra_score":
+            pending_extra_score[user_id] = True
+            send_message(chat_id, "Введіть кількість екстра балів, яку хочете нарахувати:")
         elif data_value.startswith("do_permatask_"):
             idx = int(data_value.split("_")[-1])
             task = permatasks[idx]
             reward = task["score"]
             user_scores[user_id] = user_scores.get(user_id, 0) + reward
             save_scores()
+            update_user_stats_on_done(user_id, task["name"], reward)
             send_message(chat_id, f"Ви виконали: {task['name']}! +{reward}⭐️ до балансу.")
     return "ok"
 
