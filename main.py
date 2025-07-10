@@ -12,7 +12,6 @@ TELEGRAM_API_URL = f"https://api.telegram.org/bot{TOKEN}"
 app = Flask(__name__)
 
 # === Всі ваші структури і функції для роботи з файлами ===
-# Завантаження звичайних завдань
 if os.path.exists("tasks.json"):
     with open("tasks.json", encoding="utf-8") as f:
         user_tasks = json.load(f)
@@ -23,7 +22,6 @@ def save_tasks():
     with open("tasks.json", "w", encoding="utf-8") as f:
         json.dump(user_tasks, f, ensure_ascii=False)
 
-# Завантаження балансу
 if os.path.exists("scores.json"):
     with open("scores.json", encoding="utf-8") as f:
         user_scores = json.load(f)
@@ -34,7 +32,6 @@ def save_scores():
     with open("scores.json", "w", encoding="utf-8") as f:
         json.dump(user_scores, f, ensure_ascii=False)
 
-# Завантаження товарів
 if os.path.exists("products.json"):
     with open("products.json", encoding="utf-8") as f:
         products = json.load(f)
@@ -51,7 +48,6 @@ def save_products():
     with open("products.json", "w", encoding="utf-8") as f:
         json.dump(products, f, ensure_ascii=False)
 
-# Завантаження постійних завдань
 if os.path.exists("permatasks.json"):
     with open("permatasks.json", encoding="utf-8") as f:
         permatasks = json.load(f)
@@ -68,7 +64,6 @@ def save_permatasks():
     with open("permatasks.json", "w", encoding="utf-8") as f:
         json.dump(permatasks, f, ensure_ascii=False)
 
-# Завантаження цілей
 if os.path.exists("goals.json"):
     with open("goals.json", encoding="utf-8") as f:
         goals = json.load(f)
@@ -81,7 +76,6 @@ def save_goals():
     with open("goals.json", "w", encoding="utf-8") as f:
         json.dump(goals, f, ensure_ascii=False)
 
-# Завантаження статистики користувача
 if os.path.exists("user_stats.json"):
     with open("user_stats.json", encoding="utf-8") as f:
         user_stats = json.load(f)
@@ -92,7 +86,6 @@ def save_user_stats():
     with open("user_stats.json", "w", encoding="utf-8") as f:
         json.dump(user_stats, f, ensure_ascii=False)
 
-# Завантаження показаних фото для користувачів
 if os.path.exists("user_shown_photos.json"):
     with open("user_shown_photos.json", encoding="utf-8") as f:
         user_shown_photos = json.load(f)
@@ -120,7 +113,6 @@ def get_today_combo(user_id):
     stats_today = user_stats.setdefault(user_id, {}).setdefault(today, {})
     if "combo" in stats_today:
         return stats_today["combo"]
-    # Якщо combo ще не встановлено для сьогодні, переносимо з учора
     yesterday = str(date.today() - timedelta(days=1))
     stats_yesterday = user_stats.get(user_id, {}).get(yesterday, {})
     prev_combo = stats_yesterday.get("combo", 1)
@@ -137,7 +129,6 @@ def update_user_stats_on_done(user_id, task_name, score):
     today = str(date.today())
     stats = user_stats.setdefault(user_id, {}).setdefault(today, {})
     stats.setdefault("done", []).append({"name": task_name, "score": score})
-    # Оновлюємо combo через get_today_combo
     stats["combo"] = get_today_combo(user_id)
     stats["bonus"] = stats.get("bonus", 0)
     save_user_stats()
@@ -169,14 +160,10 @@ def get_daily_report(user_id):
         report += f"+ 🎯 Daily Quest: +{bonus:.2f}\n"
     final = total * multiplier + bonus
     report += f"\n✅ Фінал: {final:.2f} балів"
-    
-    # Додаємо порівняння з середніми показниками чоловіків
     if final > 0:
         report += f"\n\n💪 Зробив більше ніж 99% чоловіків за день!"
-    
     return report
 
-# === Функція для надсилання повідомлення ===
 def send_message(chat_id, text, reply_markup=None, parse_mode=None):
     url = f"{TELEGRAM_API_URL}/sendMessage"
     payload = {
@@ -202,7 +189,6 @@ def send_main_menu(chat_id):
     reply_markup = json.dumps({"inline_keyboard": keyboard})
     send_message(chat_id, "Вітаю! Обери дію:", reply_markup=reply_markup)
 
-# === Webhook endpoint ===
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
     data = request.get_json()
@@ -210,31 +196,55 @@ def webhook():
         chat_id = data["message"]["chat"]["id"]
         text = data["message"].get("text", "")
         user_id = str(chat_id)
-        # Тут розгалуження по командах і тексту
         if text == "/start":
             send_main_menu(chat_id)
         elif text == "/my_score":
             score = user_scores.get(user_id, 0)
             send_message(chat_id, f"Баланс: {score:.2f}⭐️")
             send_main_menu(chat_id)
-        # ... (інші команди, якщо треба, теж можна додати send_main_menu)
         else:
             send_message(chat_id, "Я отримав твоє повідомлення!")
             send_main_menu(chat_id)
     elif "callback_query" in data:
-        # Тут логіка для inline-кнопок (callback_query)
         query = data["callback_query"]
         chat_id = query["message"]["chat"]["id"]
         user_id = str(chat_id)
         data_value = query["data"]
-        # Далі розгалуження по data_value, наприклад:
         if data_value == "add_task":
             send_message(chat_id, "Введи текст завдання:")
         elif data_value == "my_score":
             score = user_scores.get(user_id, 0)
             send_message(chat_id, f"Баланс: {score:.2f}⭐️")
-        # ... і так далі для інших кнопок
-        send_message(chat_id, f"Оброблено callback: {data_value}")
+        elif data_value == "permatasks":
+            text = "Постійні завдання:\n"
+            for t in permatasks:
+                text += f"- {t['name']} ({t['score']}⭐️)\n"
+            send_message(chat_id, text)
+        elif data_value == "my_tasks":
+            tasks = user_tasks.get(user_id, [])
+            if tasks:
+                text = "Ваші завдання:\n"
+                for t in tasks:
+                    text += f"- {t}\n"
+            else:
+                text = "У вас немає завдань."
+            send_message(chat_id, text)
+        elif data_value == "buy":
+            text = "Магазин:\n"
+            for p in products:
+                text += f"- {p['name']} ({p['price']}⭐️)\n"
+            send_message(chat_id, text)
+        elif data_value == "goals":
+            if goals:
+                text = "Ваші цілі:\n"
+                for g in goals:
+                    text += f"- {g}\n"
+            else:
+                text = "У вас немає цілей."
+            send_message(chat_id, text)
+        elif data_value == "my_stats":
+            report = get_daily_report(user_id)
+            send_message(chat_id, report)
     return "ok"
 
 @app.route("/", methods=["GET"])
