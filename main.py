@@ -7,6 +7,8 @@ import random
 import datetime
 import threading
 from telegram.error import TelegramError
+from flask import Flask
+import threading
 
 # Завантаження звичайних завдань
 if os.path.exists("tasks.json"):
@@ -265,7 +267,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         report = get_daily_report(user_id)
         await query.edit_message_text(report)
     elif query.data == "top_1_percent":
-        top_1_percent_text = """💪 **ПЛАН ДНЯ: СИЛЬНІШЕ НІЖ 99% ЧОЛОВІКІВ**
+        top_1_percent_text = """💪 **ПЛАН ДНЯ: СИЛЬНЕ НІЖ 99% ЧОЛОВІКІВ**
 
 👨‍💻 **Програмування** — 6–8 год
 🗣 **Мови** — 3–4 год (говоріння, граматика, аудіо)
@@ -496,12 +498,21 @@ def setup_jobs():
 if __name__ == "__main__":
     setup_jobs()
     port = int(os.environ.get("PORT", 10000))
-    telegram_app.run_webhook(
+    # Запускаємо PTB у окремому потоці
+    threading.Thread(target=lambda: telegram_app.run_webhook(
         listen="0.0.0.0",
         port=port,
-        webhook_url="https://tgbot-kqfh.onrender.com/8076795269:AAG0z1_n31zSeLxk_z-PKJZLv_rv3JR5XHE",
+        webhook_url=WEBHOOK_URL,
         drop_pending_updates=True
-    )
+    )).start()
+    # Запускаємо Flask для root endpoint
+    app = Flask(__name__)
+
+    @app.route("/")
+    def index():
+        return "Bot is running!"
+
+    app.run(host="0.0.0.0", port=port)
 
 # === Інструкція ===
 # Після деплою на Render, зареєструйте webhook для вашого бота:
