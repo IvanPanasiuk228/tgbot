@@ -1,3 +1,4 @@
+from flask import Flask, request
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, ContextTypes, filters
 import json
@@ -5,6 +6,7 @@ import os
 from datetime import date, timedelta
 import random
 import datetime
+import threading
 
 # Завантаження звичайних завдань
 if os.path.exists("tasks.json"):
@@ -455,29 +457,61 @@ async def send_daily_report(context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(f"Помилка надсилання щоденного звіту: {e}")
 
-# Основна функція запуску бота
-def main():
-    app = ApplicationBuilder().token("8076795269:AAG0z1_n31zSeLxk_z-PKJZLv_rv3JR5XHE").build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("get_id", get_id))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    app.add_handler(MessageHandler((filters.PHOTO | filters.VIDEO) & ~filters.COMMAND, get_file_id))
-    
-    # Налаштування планувальника для автоматичних повідомлень
-    app.job_queue.run_daily(
+# === Flask app for webhook ===
+TOKEN = "8076795269:AAG0z1_n31zSeLxk_z-PKJZLv_rv3JR5XHE"
+WEBHOOK_PATH = f"/{TOKEN}"
+# Змініть на свою адресу Render нижче!
+WEBHOOK_URL = f"https://tgbot-kqfh.onrender.com/{TOKEN}"
+
+app = Flask(__name__)
+
+# === PTB Application ===
+telegram_app = ApplicationBuilder().token(TOKEN).build()
+
+# Додаємо всі handler-и
+telegram_app.add_handler(CommandHandler("start", start))
+telegram_app.add_handler(CommandHandler("get_id", get_id))
+telegram_app.add_handler(CallbackQueryHandler(button_handler))
+telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+telegram_app.add_handler(MessageHandler((filters.PHOTO | filters.VIDEO) & ~filters.COMMAND, get_file_id))
+
+# Job Queue (нагадування)
+def setup_jobs():
+    telegram_app.job_queue.run_daily(
         send_gym_reminder,
         time=datetime.time(hour=6, minute=0),
     )
-    app.job_queue.run_daily(
+    telegram_app.job_queue.run_daily(
         send_daily_report,
         time=datetime.time(hour=9, minute=0),
     )
-    
     print("Бот запущено!")
     print("Автоматичні повідомлення про зал налаштовано на 6:00 щодня")
     print("Автоматичні щоденні звіти налаштовано на 9:00 щодня")
-    app.run_polling()
+
+# === Flask endpoint для Telegram webhook ===
+@app.route(WEBHOOK_PATH, methods=["POST"])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), telegram_app.bot)
+    telegram_app.update_queue.put(update)
+    return "ok"
+
+if __name__ == "__main__":
+    # Запускаємо PTB Application у окремому потоці
+    setup_jobs()
+    threading.Thread(target=telegram_app.run_webhook, kwargs={
+        "listen": "0.0.0.0",
+        "port": 10000,
+        "webhook_url": WEBHOOK_URL,
+        "drop_pending_updates": True
+    }).start()
+    # Flask слухає порт (Render цього вимагає)
+    app.run(host="0.0.0.0", port=10000)
+
+# === Інструкція ===
+# Після деплою на Render, зареєструйте webhook для вашого бота:
+# curl -F "url=https://ВАШ-РЕНДЕР-АДРЕСА.onrender.com/8076795269:AAG0z1_n31zSeLxk_z-PKJZLv_rv3JR5XHE" https://api.telegram.org/bot8076795269:AAG0z1_n31zSeLxk_z-PKJZLv_rv3JR5XHE/setWebhook
+# Замість ВАШ-РЕНДЕР-АДРЕСА.onrender.com підставте свою адресу Render Web Service.
 
 def get_today_combo(user_id):
     today = str(date.today())
@@ -549,6 +583,3 @@ async def get_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"Video file_id: {file_id}")
     else:
         await update.message.reply_text("Надішли фото або відео у відповідь на цю команду.")
-
-if __name__ == "__main__":
-    main()
