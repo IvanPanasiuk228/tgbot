@@ -6,6 +6,7 @@ from datetime import date, timedelta
 import random
 import datetime
 import threading
+from telegram.error import TelegramError
 
 # Завантаження звичайних завдань
 if os.path.exists("tasks.json"):
@@ -567,3 +568,10 @@ def get_daily_report(user_id):
         report += f"\n\n💪 Зробив більше ніж 99% чоловіків за день!"
     
     return report
+
+async def error_handler(update, context):
+    print("Exception while handling an update!")
+    print(f"Update: {update}")
+    print(f"Context error: {context.error}")
+
+telegram_app.add_error_handler(error_handler)
