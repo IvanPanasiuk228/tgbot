@@ -468,6 +468,16 @@ app = Flask(__name__)
 # === PTB Application ===
 telegram_app = ApplicationBuilder().token(TOKEN).build()
 
+async def get_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.message.photo:
+        file_id = update.message.photo[-1].file_id
+        await update.message.reply_text(f"Photo file_id: {file_id}")
+    elif update.message.video:
+        file_id = update.message.video.file_id
+        await update.message.reply_text(f"Video file_id: {file_id}")
+    else:
+        await update.message.reply_text("Надішли фото або відео у відповідь на цю команду.")
+
 # Додаємо всі handler-и
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(CommandHandler("get_id", get_id))
@@ -573,13 +583,3 @@ def get_daily_report(user_id):
         report += f"\n\n💪 Зробив більше ніж 99% чоловіків за день!"
     
     return report
-
-async def get_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.photo:
-        file_id = update.message.photo[-1].file_id
-        await update.message.reply_text(f"Photo file_id: {file_id}")
-    elif update.message.video:
-        file_id = update.message.video.file_id
-        await update.message.reply_text(f"Video file_id: {file_id}")
-    else:
-        await update.message.reply_text("Надішли фото або відео у відповідь на цю команду.")
