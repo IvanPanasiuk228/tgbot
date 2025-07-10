@@ -113,17 +113,10 @@ def calculate_score(time, difficulty, nb, mental, time_weight, difficulty_weight
 # /start команда
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("Start handler called!")
-    keyboard = [
-        [InlineKeyboardButton("Завдання", callback_data="tasks_menu")],
-        [InlineKeyboardButton("Цілі", callback_data="goals")],
-        [InlineKeyboardButton("Екстра бали", callback_data="extra")],
-        [InlineKeyboardButton("Баланс", callback_data="my_score")],
-        [InlineKeyboardButton("Купити", callback_data="buy")],
-        [InlineKeyboardButton("Моя статистика", callback_data="my_stats")],
-        [InlineKeyboardButton("Сильніше ніж 99% чоловіків", callback_data="top_1_percent")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Вітаю! Обери дію:", reply_markup=reply_markup)
+    try:
+        await update.message.reply_text("Вітаю! Обери дію:")
+    except Exception as e:
+        print(f"Error in start handler: {e}")
 
 # Підменю для завдань
 async def tasks_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -315,6 +308,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Покрокове додавання завдання
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("handle_message called!")
     user_id = str(update.effective_user.id)
     text = update.message.text.lower().strip()
     # Ключові слова для запуску меню
@@ -474,7 +468,7 @@ async def get_file_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_id = update.message.video.file_id
         await update.message.reply_text(f"Video file_id: {file_id}")
     else:
-        await update.message.reply_text("Надішли фото або відео у відповідь на цю команду.")
+        await update.message.reply_text("Надішліть фото або відео у відповідь на цю команду.")
 
 # Додаємо всі handler-и
 telegram_app.add_handler(CommandHandler("start", start))
