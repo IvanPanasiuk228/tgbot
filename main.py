@@ -113,16 +113,20 @@ def calculate_score(time, difficulty, nb, mental, time_weight, difficulty_weight
 def get_today_combo(user_id):
     today = str(date.today())
     stats_today = user_stats.setdefault(user_id, {}).setdefault(today, {})
+    # Якщо комбо вже є для сьогодні - повертаємо його
     if "combo" in stats_today:
         return stats_today["combo"]
+    
+    # Інакше розраховуємо нове комбо
     yesterday = str(date.today() - timedelta(days=1))
     stats_yesterday = user_stats.get(user_id, {}).get(yesterday, {})
     prev_combo = stats_yesterday.get("combo", 1)
     done_yesterday = stats_yesterday.get("done", [])
+    # Перевіряємо, чи вчора було виконано 5+ завдань
     if len(done_yesterday) >= 5:
-        new_combo = min(prev_combo + 0.25, 15)
+        new_combo = min(prev_combo + 0.25, 15)  # +0.25 до комбо
     else:
-        new_combo = 1
+        new_combo = 1  # Скидаємо до 1
     stats_today["combo"] = new_combo
     save_user_stats()
     return new_combo
@@ -186,7 +190,23 @@ def send_message(chat_id, text, reply_markup=None, parse_mode=None):
         payload["reply_markup"] = reply_markup
     if parse_mode:
         payload["parse_mode"] = parse_mode
-    requests.post(url, json=payload)
+    response = requests.post(url, json=payload)
+    return response.json()
+
+def edit_message(chat_id, message_id, text, reply_markup=None, parse_mode=None):
+    """Редагує існуюче повідомлення"""
+    url = f"{TELEGRAM_API_URL}/editMessageText"
+    payload = {
+        "chat_id": chat_id,
+        "message_id": message_id,
+        "text": text
+    }
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+    if parse_mode:
+        payload["parse_mode"] = parse_mode
+    response = requests.post(url, json=payload)
+    return response.json()
 
 def send_main_menu(chat_id):
     keyboard = [
@@ -201,6 +221,12 @@ def send_main_menu(chat_id):
     ]
     reply_markup = json.dumps({"inline_keyboard": keyboard})
     send_message(chat_id, "Вітаю! Обери дію:", reply_markup=reply_markup)
+
+def send_back_button(chat_id, text):
+    """Відправляє повідомлення з кнопкою 'Назад'"""
+    keyboard = [[{"text": "⬅️ Назад", "callback_data": "back_to_menu"}]]
+    reply_markup = json.dumps({"inline_keyboard": keyboard})
+    send_message(chat_id, text, reply_markup=reply_markup)
 
 pending_extra_score = {}
 
@@ -251,18 +277,36 @@ def webhook():
             else:
                 send_message(chat_id, "Будь ласка, вкажіть текст завдання після /done")
         else:
-            send_message(chat_id, "Я отримав твоє повідомлення!")
             send_main_menu(chat_id)
     elif "callback_query" in data:
         query = data["callback_query"]
         chat_id = query["message"]["chat"]["id"]
+        message_id = query["message"]["message_id"]
         user_id = str(chat_id)
         data_value = query["data"]
-        if data_value == "add_task":
-            send_message(chat_id, "Введи текст завдання або використай команду /add_task [текст]")
+        
+        if data_value == "back_to_menu":
+            keyboard = [
+                [{"text": "Додати завдання", "callback_data": "add_task"}],
+                [{"text": "Мої завдання", "callback_data": "my_tasks"}],
+                [{"text": "Постійні завдання", "callback_data": "permatasks"}],
+                [{"text": "Баланс", "callback_data": "my_score"}],
+                [{"text": "Купити", "callback_data": "buy"}],
+                [{"text": "Цілі", "callback_data": "goals"}],
+                [{"text": "Статистика", "callback_data": "my_stats"}],
+                [{"text": "Екстра бали", "callback_data": "extra_score"}]
+            ]
+            reply_markup = json.dumps({"inline_keyboard": keyboard})
+            edit_message(chat_id, message_id, "Вітаю! Обери дію:", reply_markup=reply_markup)
+        elif data_value == "add_task":
+            keyboard = [[{"text": "⬅️ Назад", "callback_data": "back_to_menu"}]]
+            reply_markup = json.dumps({"inline_keyboard": keyboard})
+            edit_message(chat_id, message_id, "Введи текст завдання або використай команду /add_task [текст]", reply_markup=reply_markup)
         elif data_value == "my_score":
             score = user_scores.get(user_id, 0)
-            send_message(chat_id, f"Баланс: {score:.2f}⭐️")
+            keyboard = [[{"text": "⬅️ Назад", "callback_data": "back_to_menu"}]]
+            reply_markup = json.dumps({"inline_keyboard": keyboard})
+            edit_message(chat_id, message_id, f"Баланс: {score:.2f}⭐️", reply_markup=reply_markup)
         elif data_value == "permatasks":
             keyboard = []
             for idx, t in enumerate(permatasks):
@@ -270,8 +314,9 @@ def webhook():
                     "text": f"{t['name']} ({t['score']}⭐️)",
                     "callback_data": f"do_permatask_{idx}"
                 }])
+            keyboard.append([{"text": "⬅️ Назад", "callback_data": "back_to_menu"}])
             reply_markup = json.dumps({"inline_keyboard": keyboard})
-            send_message(chat_id, "Оберіть завдання для виконання:", reply_markup=reply_markup)
+            edit_message(chat_id, message_id, "Оберіть завдання для виконання:", reply_markup=reply_markup)
         elif data_value == "my_tasks":
             tasks = user_tasks.get(user_id, [])
             if tasks:
@@ -280,12 +325,16 @@ def webhook():
                     text += f"- {t}\n"
             else:
                 text = "У вас немає завдань."
-            send_message(chat_id, text)
+            keyboard = [[{"text": "⬅️ Назад", "callback_data": "back_to_menu"}]]
+            reply_markup = json.dumps({"inline_keyboard": keyboard})
+            edit_message(chat_id, message_id, text, reply_markup=reply_markup)
         elif data_value == "buy":
             text = "Магазин:\n"
             for p in products:
                 text += f"- {p['name']} ({p['price']}⭐️)\n"
-            send_message(chat_id, text)
+            keyboard = [[{"text": "⬅️ Назад", "callback_data": "back_to_menu"}]]
+            reply_markup = json.dumps({"inline_keyboard": keyboard})
+            edit_message(chat_id, message_id, text, reply_markup=reply_markup)
         elif data_value == "goals":
             if goals:
                 text = "Ваші цілі:\n"
@@ -293,13 +342,19 @@ def webhook():
                     text += f"- {g}\n"
             else:
                 text = "У вас немає цілей."
-            send_message(chat_id, text)
+            keyboard = [[{"text": "⬅️ Назад", "callback_data": "back_to_menu"}]]
+            reply_markup = json.dumps({"inline_keyboard": keyboard})
+            edit_message(chat_id, message_id, text, reply_markup=reply_markup)
         elif data_value == "my_stats":
             report = get_daily_report(user_id)
-            send_message(chat_id, report)
+            keyboard = [[{"text": "⬅️ Назад", "callback_data": "back_to_menu"}]]
+            reply_markup = json.dumps({"inline_keyboard": keyboard})
+            edit_message(chat_id, message_id, report, reply_markup=reply_markup)
         elif data_value == "extra_score":
             pending_extra_score[user_id] = True
-            send_message(chat_id, "Введіть кількість екстра балів, яку хочете нарахувати:")
+            keyboard = [[{"text": "⬅️ Назад", "callback_data": "back_to_menu"}]]
+            reply_markup = json.dumps({"inline_keyboard": keyboard})
+            edit_message(chat_id, message_id, "Введіть кількість екстра балів, яку хочете нарахувати:", reply_markup=reply_markup)
         elif data_value.startswith("do_permatask_"):
             idx = int(data_value.split("_")[-1])
             task = permatasks[idx]
@@ -307,7 +362,9 @@ def webhook():
             user_scores[user_id] = user_scores.get(user_id, 0) + reward
             save_scores()
             update_user_stats_on_done(user_id, task["name"], reward)
-            send_message(chat_id, f"Ви виконали: {task['name']}! +{reward}⭐️ до балансу.")
+            keyboard = [[{"text": "⬅️ Назад", "callback_data": "back_to_menu"}]]
+            reply_markup = json.dumps({"inline_keyboard": keyboard})
+            edit_message(chat_id, message_id, f"Ви виконали: {task['name']}! +{reward}⭐️ до балансу.", reply_markup=reply_markup)
     return "ok"
 
 @app.route("/", methods=["GET"])
