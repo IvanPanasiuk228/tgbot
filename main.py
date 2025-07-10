@@ -189,6 +189,19 @@ def send_message(chat_id, text, reply_markup=None, parse_mode=None):
         payload["parse_mode"] = parse_mode
     requests.post(url, json=payload)
 
+def send_main_menu(chat_id):
+    keyboard = [
+        [{"text": "Додати завдання", "callback_data": "add_task"}],
+        [{"text": "Мої завдання", "callback_data": "my_tasks"}],
+        [{"text": "Постійні завдання", "callback_data": "permatasks"}],
+        [{"text": "Баланс", "callback_data": "my_score"}],
+        [{"text": "Купити", "callback_data": "buy"}],
+        [{"text": "Цілі", "callback_data": "goals"}],
+        [{"text": "Статистика", "callback_data": "my_stats"}]
+    ]
+    reply_markup = json.dumps({"inline_keyboard": keyboard})
+    send_message(chat_id, "Вітаю! Обери дію:", reply_markup=reply_markup)
+
 # === Webhook endpoint ===
 @app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
@@ -199,7 +212,7 @@ def webhook():
         user_id = str(chat_id)
         # Тут розгалуження по командах і тексту
         if text == "/start":
-            send_message(chat_id, "Вітаю! Обери дію:")
+            send_main_menu(chat_id)
         elif text == "/my_score":
             score = user_scores.get(user_id, 0)
             send_message(chat_id, f"Баланс: {score:.2f}⭐️")
@@ -212,7 +225,13 @@ def webhook():
         chat_id = query["message"]["chat"]["id"]
         user_id = str(chat_id)
         data_value = query["data"]
-        # ... (сюди переносите логіку з button_handler)
+        # Далі розгалуження по data_value, наприклад:
+        if data_value == "add_task":
+            send_message(chat_id, "Введи текст завдання:")
+        elif data_value == "my_score":
+            score = user_scores.get(user_id, 0)
+            send_message(chat_id, f"Баланс: {score:.2f}⭐️")
+        # ... і так далі для інших кнопок
         send_message(chat_id, f"Оброблено callback: {data_value}")
     return "ok"
 
