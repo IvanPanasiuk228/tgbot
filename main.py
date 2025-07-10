@@ -499,13 +499,6 @@ def setup_jobs():
     print("Автоматичні щоденні звіти налаштовано на 9:00 щодня")
 
 # === Flask endpoint для Telegram webhook ===
-@app.route(WEBHOOK_PATH, methods=["POST"])
-def webhook():
-    print("Webhook called!")
-    update = Update.de_json(request.get_json(force=True), telegram_app.bot)
-    telegram_app.update_queue.put(update)
-    return "ok"
-
 if __name__ == "__main__":
     setup_jobs()
     telegram_app.run_webhook(
